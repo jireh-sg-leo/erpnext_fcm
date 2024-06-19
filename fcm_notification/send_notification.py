@@ -6,6 +6,8 @@ from frappe import enqueue
 import google.auth.transport.requests
 from google.oauth2 import service_account
 
+frappe.utils.logger.set_log_level("DEBUG")
+logger = frappe.logger("fcm_erpnext", allow_site=True, max_size=10000000, file_count=20)
 
 def user_id(doc):
     user_email = doc.for_user
@@ -50,6 +52,7 @@ def _get_access_token(info):
 
 def process_notification(device_id, notification):
     info = frappe.db.get_single_value("FCM Notification Settings", "service_account_info")
+    logger.info(f"Sending to {device_id.device_id}")
     message = notification.email_content
     title = notification.subject
     if message:
@@ -58,7 +61,7 @@ def process_notification(device_id, notification):
         title = convert_message(title)
 
     
-    url = "https://fcm.googleapis.com/v1/projects/{}/messages:send".format(info.project_id)
+    url = f"https://fcm.googleapis.com/v1/projects/{info.project_id}/messages:send"
 
     body = {
         "message": {
@@ -79,36 +82,5 @@ def process_notification(device_id, notification):
             'Content-Type': 'application/json; UTF-8',
         },
     )
-    frappe.log_error(req.text)
-
-
-def process_notification_legacy(device_id, notification):
-    message = notification.email_content
-    title = notification.subject
-    if message:
-        message = convert_message(message)
-    if title:
-        title = convert_message(title)
-
-    url = "https://fcm.googleapis.com/fcm/send"
-    body = {
-        "to": device_id.device_id,
-        "notification": {"body": message, "title": title},
-        "data": {
-            "doctype": notification.document_type,
-            "docname": notification.document_name,
-        },
-    }
-
-    server_key = frappe.db.get_single_value("FCM Notification Settings", "server_key")
-    auth = f"Bearer {server_key}"
-    req = requests.post(
-        url=url,
-        data=json.dumps(body),
-        headers={
-            "Authorization": auth,
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-        },
-    )
+    logger.info(f"Post status {req.text}")
     frappe.log_error(req.text)
