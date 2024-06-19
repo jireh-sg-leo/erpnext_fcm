@@ -9,6 +9,8 @@ from google.oauth2 import service_account
 frappe.utils.logger.set_log_level("DEBUG")
 logger = frappe.logger("fcm_erpnext", allow_site=True, max_size=10000000, file_count=20)
 
+SCOPES = ['https://www.googleapis.com/auth/firebase.messaging']
+
 def user_id(doc):
     user_email = doc.for_user
     user_device_id = frappe.get_all(
@@ -52,6 +54,7 @@ def _get_access_token(info):
 
 def process_notification(device_id, notification):
     info = frappe.db.get_single_value("FCM Notification Settings", "service_account_info")
+    config = json.loads(info)
     logger.info(f"Sending to {device_id.device_id}")
     message = notification.email_content
     title = notification.subject
@@ -61,7 +64,7 @@ def process_notification(device_id, notification):
         title = convert_message(title)
 
     
-    url = f"https://fcm.googleapis.com/v1/projects/{info.project_id}/messages:send"
+    url = f"https://fcm.googleapis.com/v1/projects/{config['project_id']}/messages:send"
 
     body = {
         "message": {
@@ -78,9 +81,9 @@ def process_notification(device_id, notification):
         url=url,
         data=json.dumps(body),
         headers = {
-            'Authorization': 'Bearer ' + _get_access_token(),
+            'Authorization': 'Bearer ' + _get_access_token(config),
             'Content-Type': 'application/json; UTF-8',
         },
     )
-    logger.info(f"Post status {req.text}")
-    frappe.log_error(req.text)
+    logger.info(f"req result {req.text}")
+    # frappe.log_error(req.text)
