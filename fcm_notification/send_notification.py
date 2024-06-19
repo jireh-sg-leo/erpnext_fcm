@@ -1,8 +1,10 @@
-import frappe
-import requests
 import json
-from frappe import enqueue
 import re
+import requests
+import frappe
+from frappe import enqueue
+import google.auth.transport.requests
+from google.oauth2 import service_account
 
 
 def user_id(doc):
@@ -33,7 +35,54 @@ def convert_message(message):
     return cleanmessage
 
 
+def _get_access_token(info):
+  """Retrieve a valid access token that can be used to authorize requests.
+
+  :return: Access token.
+  """
+  credentials = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
+  #credentials = service_account.Credentials.from_service_account_file(
+  #  'service-account.json', scopes=SCOPES)
+  request = google.auth.transport.requests.Request()
+  credentials.refresh(request)
+  return credentials.token
+
+
 def process_notification(device_id, notification):
+    info = frappe.db.get_single_value("FCM Notification Settings", "service_account_info")
+    message = notification.email_content
+    title = notification.subject
+    if message:
+        message = convert_message(message)
+    if title:
+        title = convert_message(title)
+
+    
+    url = "https://fcm.googleapis.com/v1/projects/{}/messages:send".format(info.project_id)
+
+    body = {
+        "message": {
+            "token": device_id.device_id,
+            "notification": {"body": message, "title": title},
+            "data": {
+                "doctype": notification.document_type,
+                "docname": notification.document_name,
+            }
+        }
+    }
+
+    req = requests.post(
+        url=url,
+        data=json.dumps(body),
+        headers = {
+            'Authorization': 'Bearer ' + _get_access_token(),
+            'Content-Type': 'application/json; UTF-8',
+        },
+    )
+    frappe.log_error(req.text)
+
+
+def process_notification_legacy(device_id, notification):
     message = notification.email_content
     title = notification.subject
     if message:

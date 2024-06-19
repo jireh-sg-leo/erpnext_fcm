@@ -1,1 +1,12 @@
 # frappe -- https://github.com/frappe/frappe is installed via 'bench init'
+cachetools==5.3.3
+certifi==2024.6.2
+charset-normalizer==3.3.2
+google-auth==2.30.0
+idna==3.7
+pyasn1==0.6.0
+pyasn1_modules==0.4.0
+requests==2.32.3
+rsa==4.9
+urllib3==2.2.2
+
