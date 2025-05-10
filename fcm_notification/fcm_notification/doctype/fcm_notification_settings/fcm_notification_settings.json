@@ -7,7 +7,6 @@
  "engine": "InnoDB",
  "field_order": [
   "settings_section",
-  "server_key",
   "service_account_info"
  ],
  "fields": [
@@ -15,12 +14,6 @@
    "fieldname": "settings_section",
    "fieldtype": "Section Break",
    "label": "Settings"
-  },
-  {
-   "fieldname": "server_key",
-   "fieldtype": "Data",
-   "label": "Server Key",
-   "length": 250
   },
   {
    "fieldname": "service_account_info",
@@ -31,7 +24,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-06-19 06:29:42.110300",
+ "modified": "2024-06-20 12:14:53.673042",
  "modified_by": "Administrator",
  "module": "Fcm Notification",
  "name": "FCM Notification Settings",

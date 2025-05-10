@@ -14,7 +14,7 @@ SCOPES = ['https://www.googleapis.com/auth/firebase.messaging']
 def user_id(doc):
     user_email = doc.for_user
     user_device_id = frappe.get_all(
-        "User Device", filters={"user": user_email}, fields=["device_id"]
+        "User Device", filters={"user": user_email, "enabled": 1}, fields=["name", "device_id"]
     )
     return user_device_id
 
@@ -22,6 +22,7 @@ def user_id(doc):
 @frappe.whitelist()
 def send_notification(doc, event):
     device_ids = user_id(doc)
+    logger.info(device_ids)
     for device_id in device_ids:
         enqueue(
             process_notification,
@@ -45,8 +46,6 @@ def _get_access_token(info):
   :return: Access token.
   """
   credentials = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
-  #credentials = service_account.Credentials.from_service_account_file(
-  #  'service-account.json', scopes=SCOPES)
   request = google.auth.transport.requests.Request()
   credentials.refresh(request)
   return credentials.token
@@ -85,5 +84,13 @@ def process_notification(device_id, notification):
             'Content-Type': 'application/json; UTF-8',
         },
     )
-    logger.info(f"req result {req.text}")
-    # frappe.log_error(req.text)
+    res_json = json.loads(req.text)
+    if res_json['error']:
+        err = res_json['error']
+        if (err['code'] == 404):
+            # Disable device if not found
+            logger.info(f"Disabling {device_id.device_id} {device_id.name}")
+            frappe.db.set_value('User Device', device_id.name, 'enabled', 0)
+        logger.warning(f"{err['message']}")
+        return
+    logger.info(f"FCM {res_json['name']}")
